@@ -11,6 +11,7 @@ function App() {
   const [hierarchy, setHierarchy] = useState('');
   const [hierarchyGeo, setHierarchyGeo] = useState([]);
   const [hierarchyView, setHierarchyView] = useState('tree'); // 'tree' | 'map'
+  const [coordCache, setCoordCache] = useState({});
   const [companyDetails, setCompanyDetails] = useState(null);
   const [currentView, setCurrentView] = useState('search'); // 'search', 'company', 'hierarchy'
   const [loading, setLoading] = useState(false);
@@ -338,6 +339,26 @@ function App() {
     JP: [36, 138],
     CN: [35, 103],
     AU: [-25, 133],
+    MX: [23.6, -102.5],
+  };
+
+  const getCoords = async (iso) => {
+    if (coordCache[iso]) return coordCache[iso];
+    if (countryCentroids[iso]) {
+      setCoordCache((c)=>({...c, [iso]: countryCentroids[iso]}));
+      return countryCentroids[iso];
+    }
+    try {
+      const resp = await fetch(`https://restcountries.com/v3.1/alpha/${iso}`);
+      const data = await resp.json();
+      if (Array.isArray(data) && data[0]?.latlng) {
+        const coords = [data[0].latlng[0], data[0].latlng[1]];
+        setCoordCache((c)=>({...c, [iso]: coords}));
+        return coords;
+      }
+    } catch (err) { console.error('Country fetch error', err); }
+    // fallback to 0,0
+    return [0,0];
   };
 
   const fetchHierarchyGeo = async () => {
@@ -678,7 +699,14 @@ function App() {
                    {/* build mapping */}
                    {(()=>{
                      const posMap = {};
-                     hierarchyGeo.forEach(n=>{ posMap[n.lei] = countryCentroids[n.country] || [0,0];});
+                     const promises = hierarchyGeo.map(async n=>{
+                       const coords = await getCoords(n.country);
+                       posMap[n.lei] = coords;
+                     });
+                     Promise.all(promises).then(()=>{
+                       // force rerender
+                       setCoordCache((c)=>({...c}));
+                     });
                      const rootLei = hierarchyGeo.find(n=>!n.parent)?.lei;
                      return (
                        <>
