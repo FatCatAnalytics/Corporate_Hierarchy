@@ -534,32 +534,12 @@ function App() {
                   <span className="value">{companyDetails.legal_name}</span>
                 </div>
                 <div className="info-row">
-                  <span className="label">Legal Form:</span>
-                  <span className="value">{companyDetails.legal_form}</span>
-                </div>
-                <div className="info-row">
                   <span className="label">Status:</span>
                   <span className="value">{companyDetails.status}</span>
                 </div>
                 <div className="info-row">
                   <span className="label">Creation Date:</span>
                   <span className="value">{companyDetails.creation_date}</span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <h4>🌍 Registration</h4>
-                <div className="info-row">
-                  <span className="label">Country:</span>
-                  <span className="value">{companyDetails.registration.country}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Registration Date:</span>
-                  <span className="value">{companyDetails.registration.date}</span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Registration Status:</span>
-                  <span className="value">{companyDetails.registration.status}</span>
                 </div>
               </div>
 
@@ -585,6 +565,10 @@ function App() {
 
               <div className="info-card">
                 <h4>🔢 LEI Registration</h4>
+                <div className="info-row">
+                  <span className="label">Registration Status:</span>
+                  <span className="value">{companyDetails.registration.status}</span>
+                </div>
                 <div className="info-row">
                   <span className="label">Initial Date:</span>
                   <span className="value">{companyDetails.lei_registration.initial_date}</span>
