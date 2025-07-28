@@ -268,13 +268,13 @@ def print_tree(node, indent=0, original_search_lei=None):
     lei_info = f"({node['lei']}, S&P: {node.get('spid', 'N/A')})"
     
     if indent == 0:
-        # Root level - ultimate parent in red
-        print(f"🏢 {RED}ULTIMATE PARENT: {node['name']} {lei_info}{RESET}")
+        # Root level - ultimate parent in red text
+        print(f"{RED}ULTIMATE PARENT: {node['name']} {lei_info}{RESET}")
     else:
         # Check if this is the searched entity
         if node['lei'] == original_search_lei:
-            # Searched entity in green
-            print(f"{prefix}├── {GREEN}🎯 {node['name']} {lei_info} [SEARCHED ENTITY]{RESET}")
+            # Searched entity in green text
+            print(f"{prefix}├── {GREEN}{node['name']} {lei_info}{RESET}")
         else:
             # Regular child
             print(f"{prefix}├── {node['name']} {lei_info}")
