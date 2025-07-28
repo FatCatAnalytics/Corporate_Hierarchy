@@ -2,8 +2,80 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import './styles.css';
-import { MapContainer, TileLayer, CircleMarker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// Map content component to handle markers and lines
+function MapContent({ hierarchyGeo, countryCentroids }) {
+  const [positions, setPositions] = useState({});
+  const map = useMap();
+
+  useEffect(() => {
+    const loadPositions = async () => {
+      const posMap = {};
+      
+      for (const node of hierarchyGeo) {
+        if (countryCentroids[node.country]) {
+          posMap[node.lei] = countryCentroids[node.country];
+        } else {
+          posMap[node.lei] = [0, 0]; // fallback
+        }
+      }
+      
+      setPositions(posMap);
+      
+      // Fit bounds after positions are set
+      const coords = Object.values(posMap).filter(p => p[0] !== 0 || p[1] !== 0);
+      if (coords.length > 0 && map) {
+        setTimeout(() => map.fitBounds(coords, { padding: [30, 30] }), 100);
+      }
+    };
+    
+    if (hierarchyGeo.length > 0) {
+      loadPositions();
+    }
+  }, [hierarchyGeo, countryCentroids, map]);
+
+  const rootLei = hierarchyGeo.find(n => !n.parent)?.lei;
+
+  return (
+    <>
+      {/* Markers */}
+      {hierarchyGeo.map((node, i) => {
+        const pos = positions[node.lei];
+        if (!pos) return null;
+        
+        const isRoot = node.lei === rootLei;
+        return (
+          <CircleMarker
+            key={node.lei}
+            center={pos}
+            radius={isRoot ? 10 : 6}
+            pathOptions={{ color: isRoot ? '#e74c3c' : '#3498db' }}
+          >
+            <Popup>
+              {node.name}<br/>
+              LEI: {node.lei}<br/>
+              S&P: {node.spid}
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+      
+      {/* Lines */}
+      {hierarchyGeo
+        .filter(node => node.parent && positions[node.parent] && positions[node.lei])
+        .map((node, i) => (
+          <Polyline
+            key={`line-${node.lei}`}
+            positions={[positions[node.parent], positions[node.lei]]}
+            pathOptions={{ color: '#7f8c8d', weight: 1 }}
+          />
+        ))
+      }
+    </>
+  );
+}
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -341,6 +413,82 @@ function App() {
     CN: [35, 103],
     AU: [-25, 133],
     MX: [23.6, -102.5],
+    CL: [-30, -71],
+    NL: [52.1, 5.3],
+    SG: [1.3, 103.8],
+    BR: [-14.2, -51.9],
+    KR: [35.9, 127.8],
+    TW: [23.8, 120.9],
+    HK: [22.4, 114.2],
+    CH: [46.8, 8.2],
+    AT: [47.5, 14.5],
+    BE: [50.5, 4.5],
+    IT: [41.9, 12.6],
+    ES: [40.5, -3.7],
+    SE: [60.1, 18.6],
+    NO: [60.5, 8.5],
+    FI: [61.9, 25.7],
+    DK: [56.3, 9.5],
+    PL: [51.9, 19.1],
+    CZ: [49.8, 15.5],
+    HU: [47.2, 19.5],
+    PT: [39.4, -8.2],
+    GR: [39.1, 21.8],
+    TR: [38.9, 35.2],
+    RU: [61.5, 105.3],
+    UA: [48.4, 31.2],
+    ZA: [-30.6, 22.9],
+    EG: [26.8, 30.8],
+    MA: [31.8, -7.1],
+    NG: [9.1, 8.7],
+    KE: [-0.0, 37.9],
+    TH: [15.9, 100.9],
+    VN: [14.1, 108.3],
+    MY: [4.2, 101.9],
+    ID: [-0.8, 113.9],
+    PH: [12.9, 121.8],
+    AR: [-38.4, -63.6],
+    CO: [4.6, -74.1],
+    PE: [-9.2, -75.0],
+    VE: [6.4, -66.6],
+    UY: [-32.5, -55.8],
+    EC: [-1.8, -78.2],
+    BO: [-16.3, -63.6],
+    PY: [-23.4, -58.4],
+    GY: [4.9, -58.9],
+    SR: [3.9, -56.0],
+    FK: [-51.8, -59.5],
+    IL: [31.0, 34.9],
+    SA: [23.9, 45.1],
+    AE: [23.4, 53.8],
+    QA: [25.3, 51.2],
+    KW: [29.3, 47.5],
+    BH: [25.9, 50.6],
+    OM: [21.5, 55.9],
+    JO: [30.6, 36.2],
+    LB: [33.9, 35.9],
+    SY: [34.8, 38.0],
+    IQ: [33.2, 43.7],
+    IR: [32.4, 53.7],
+    AF: [33.9, 67.7],
+    PK: [30.4, 69.3],
+    BD: [23.7, 90.4],
+    LK: [7.9, 80.8],
+    MV: [3.2, 73.2],
+    NP: [28.4, 84.1],
+    BT: [27.5, 90.4],
+    MM: [21.9, 95.9],
+    KH: [12.6, 104.9],
+    LA: [19.9, 102.5],
+    MN: [46.9, 103.8],
+    KZ: [48.0, 66.9],
+    KG: [41.2, 74.8],
+    TJ: [38.9, 71.3],
+    UZ: [41.4, 64.6],
+    TM: [38.97, 59.56],
+    AZ: [40.1, 47.6],
+    GE: [42.3, 43.4],
+    AM: [40.1, 45.0]
   };
 
   const getCoords = async (iso) => {
@@ -693,43 +841,10 @@ function App() {
           )}
           {hierarchyView==='map' && (
             <div className="map-container">
-              {/* Map only if leaflet is available */}
               {hierarchyGeo.length>0 ? (
-                <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}} whenCreated={(map)=>{mapRef.current=map}}>
+                <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}} ref={mapRef}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                   {/* build mapping */}
-                   {(()=>{
-                     const posMap = {};
-                     const promises = hierarchyGeo.map(async n=>{
-                       const coords = await getCoords(n.country);
-                       posMap[n.lei] = coords;
-                     });
-                     Promise.all(promises).then(()=>{
-                       // after coords ready, fit map bounds
-                       if (mapRef.current) {
-                         const latlngs = Object.values(posMap).filter(p=>p[0]!==0||p[1]!==0);
-                         if (latlngs.length>0) mapRef.current.fitBounds(latlngs, {padding:[30,30]});
-                       }
-                       setCoordCache((c)=>({...c}));
-                     });
-                     const rootLei = hierarchyGeo.find(n=>!n.parent)?.lei;
-                     return (
-                       <>
-                         {hierarchyGeo.map((n,i)=>{
-                           const pos = posMap[n.lei];
-                           const isRoot = n.lei === rootLei;
-                           return <CircleMarker center={pos} radius={isRoot?10:6} pathOptions={{ color: isRoot?'#e74c3c':'#3498db' }} key={i}>
-                                    <Popup>{n.name}<br/>({n.lei})</Popup>
-                                  </CircleMarker>
-                         })}
-                         {/* lines */}
-                         {hierarchyGeo.filter(n=>n.parent && posMap[n.parent]).map((n,i)=>{
-                           const from=posMap[n.parent]; const to=posMap[n.lei];
-                           return <Polyline key={'l'+i} positions={[from,to]} pathOptions={{color:'#7f8c8d',weight:1}} />
-                         })}
-                       </>
-                     );
-                   })()}
+                  <MapContent hierarchyGeo={hierarchyGeo} countryCentroids={countryCentroids} />
                 </MapContainer>
               ): (<p>Loading map data...</p>)}
             </div>
