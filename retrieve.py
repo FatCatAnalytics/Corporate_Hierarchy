@@ -151,7 +151,7 @@ def build_hierarchy(start_lei):
     """
     Build a hierarchical tree starting from the ultimate parent of the given LEI.
     Always shows the complete corporate structure from the top down.
-    Returns a nested dict: {'lei': str, 'name': str, 'children': [subtrees...]}.
+    Returns a nested dict: {'lei': str, 'name': str, 'children': [subtrees...], 'original_search_lei': str}.
     """
     # First, find the ultimate parent
     ultimate_parent_lei = get_ultimate_parent(start_lei)
@@ -189,6 +189,9 @@ def build_hierarchy(start_lei):
 
     # Build initial tree via direct children starting from ultimate parent
     root = recurse(ultimate_parent_lei)
+    
+    # Store the original search LEI in the root for highlighting purposes
+    root['original_search_lei'] = start_lei
 
     # Collect all LEIs present in the tree
     def collect_leis(subtree):
@@ -247,20 +250,37 @@ def get_entity_details(lei):
     except Exception:
         return None
 
-def print_tree(node, indent=0):
+def print_tree(node, indent=0, original_search_lei=None):
     """
-    Nicely print a hierarchical tree of LEIs - clean version showing only the tree structure.
+    Nicely print a hierarchical tree of LEIs with color highlighting.
+    Ultimate parent in red, searched entity in green.
     """
+    # ANSI color codes
+    RED = '\033[91m'    # Red for ultimate parent
+    GREEN = '\033[92m'  # Green for searched entity
+    RESET = '\033[0m'   # Reset to default color
+    
+    # Get the original search LEI from root node if not passed
+    if original_search_lei is None and 'original_search_lei' in node:
+        original_search_lei = node['original_search_lei']
+    
     prefix = "    " * indent
+    lei_info = f"({node['lei']}, S&P: {node.get('spid', 'N/A')})"
+    
     if indent == 0:
-        # Root level - indicate this is the ultimate parent
-        print(f"🏢 ULTIMATE PARENT: {node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
+        # Root level - ultimate parent in red
+        print(f"🏢 {RED}ULTIMATE PARENT: {node['name']} {lei_info}{RESET}")
     else:
-        # Child levels with tree formatting
-        print(f"{prefix}├── {node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
+        # Check if this is the searched entity
+        if node['lei'] == original_search_lei:
+            # Searched entity in green
+            print(f"{prefix}├── {GREEN}🎯 {node['name']} {lei_info} [SEARCHED ENTITY]{RESET}")
+        else:
+            # Regular child
+            print(f"{prefix}├── {node['name']} {lei_info}")
     
     for child in node['children']:
-        print_tree(child, indent + 1)
+        print_tree(child, indent + 1, original_search_lei)
 
 # =================================================================================
 # Functions for interactive hierarchy display
