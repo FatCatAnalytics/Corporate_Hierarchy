@@ -142,12 +142,16 @@ def build_hierarchy(parent_lei):
         visited.add(lei)
         
         node_name = lei  # fallback
+        spid = 'N/A'  # default S&P Global ID
         # get the entity name for the current LEI
         detail = get_entity_details(lei)
         if detail:
             node_name = detail['attributes']['entity']['legalName']['name']
+            # Extract S&P Global Market Intelligence ID if available
+            identifiers = detail['attributes']['entity'].get('identifiers', {})
+            spid = identifiers.get('s&pGlobalMarketIntelligenceID', 'N/A')
         
-        node = {'lei': lei, 'name': node_name, 'children': []}
+        node = {'lei': lei, 'name': node_name, 'spid': spid, 'children': []}
         
         # Get direct children
         children = get_direct_children(lei)
@@ -187,7 +191,7 @@ def build_hierarchy(parent_lei):
                     def attach_to_parent(subtree):
                         nonlocal attached
                         if subtree['lei'] == parent_info['lei']:
-                            subtree['children'].append({'lei': child['lei'], 'name': child['name'], 'children': []})
+                            subtree['children'].append({'lei': child['lei'], 'name': child['name'], 'spid': 'N/A', 'children': []})
                             attached = True
                             return True
                         for sub in subtree['children']:
@@ -199,7 +203,7 @@ def build_hierarchy(parent_lei):
                         continue
                 
                 # otherwise attach to the root node
-                root['children'].append({'lei': child['lei'], 'name': child['name'], 'children': []})
+                root['children'].append({'lei': child['lei'], 'name': child['name'], 'spid': 'N/A', 'children': []})
             
     except Exception:
         # Silently handle ultimate children fetch errors
@@ -226,10 +230,10 @@ def print_tree(node, indent=0):
     prefix = "    " * indent
     if indent == 0:
         # Root level
-        print(f"{node['name']}")
+        print(f"{node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
     else:
         # Child levels with tree formatting
-        print(f"{prefix}├── {node['name']}")
+        print(f"{prefix}├── {node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
     
     for child in node['children']:
         print_tree(child, indent + 1)
