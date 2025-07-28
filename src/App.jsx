@@ -585,6 +585,14 @@ function App() {
                   <span className="label">Managing LOU:</span>
                   <span className="value">{companyDetails.lei_registration.managing_lou}</span>
                 </div>
+                <div className="info-row">
+                  <span className="label">Registered At (ID):</span>
+                  <span className="value">{companyDetails.lei_registration.registered_at}</span>
+                </div>
+                <div className="info-row">
+                  <span className="label">Registered As:</span>
+                  <span className="value">{companyDetails.lei_registration.registered_as}</span>
+                </div>
               </div>
             </div>
             
