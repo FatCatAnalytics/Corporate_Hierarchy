@@ -9,7 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Import functions from your updated retrieve.py
 try:
-    from retrieve import get_ranked_entities, get_hierarchy_for_selection, get_entity_details
+    from retrieve import (
+        get_ranked_entities,
+        get_hierarchy_for_selection,
+        get_entity_details,
+        build_hierarchy,
+        print_tree,
+    )
     print("Successfully imported retrieve functions")
 except ImportError as e:
     print(f"Error importing retrieve functions: {e}")
@@ -150,6 +156,30 @@ def company_details(lei: str = Query(...)):
         error_msg = f"Error getting company details for LEI {lei}: {str(e)}"
         print(error_msg)
         return {"error": error_msg, "data": None}
+
+# ------------------------------------------------------------------
+# Hierarchy by LEI (used when original search term is unavailable)
+# ------------------------------------------------------------------
+
+
+@app.get("/hierarchy_by_lei")
+def hierarchy_by_lei(lei: str = Query(...)):
+    """Build hierarchy directly from a provided LEI."""
+    if not lei or lei == "LEI_NOT_FOUND":
+        return {"error": "Invalid LEI provided"}
+
+    try:
+        stdout_buffer = io.StringIO()
+        with redirect_stdout(stdout_buffer):
+            tree = build_hierarchy(lei)
+            if tree:
+                print_tree(tree)
+        output = stdout_buffer.getvalue()
+        if not output.strip():
+            output = "No hierarchy data returned."
+        return {"text": output}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.post("/bulk-search")
 async def bulk_search(payload: dict):

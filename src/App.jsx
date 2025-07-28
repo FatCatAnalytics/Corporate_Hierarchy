@@ -272,10 +272,8 @@ function App() {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       updateProgress('📊 Building corporate hierarchy...', 60);
-      // Find the original search result to get the match index
-      const matchIndex = results.findIndex(r => r.lei === companyDetails.lei);
-      const response = await axios.get('http://127.0.0.1:8000/hierarchy', {
-        params: { name: searchTerm, match: matchIndex + 1 }
+      const response = await axios.get('http://127.0.0.1:8000/hierarchy_by_lei', {
+        params: { lei: companyDetails.lei }
       });
       
       updateProgress('🔄 Processing subsidiaries...', 80);
