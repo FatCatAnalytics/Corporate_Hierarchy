@@ -197,20 +197,22 @@ def hierarchy_geo(lei: str = Query(...)):
     try:
         tree = build_hierarchy(lei)
         flat = []
+        original_search_lei = tree.get('original_search_lei') if tree else lei
 
-        def dfs(node):
+        def dfs(node, parent=None):
             flat.append({
                 "lei": node["lei"],
                 "name": node["name"],
                 "spid": node.get("spid", "N/A"),
                 "country": node.get("country", "N/A"),
+                "parent": parent,
             })
             for c in node["children"]:
-                dfs(c)
+                dfs(c, node["lei"])
 
         if tree:
             dfs(tree)
-        return {"data": flat}
+        return {"data": flat, "original_search_lei": original_search_lei}
     except Exception as e:
         return {"error": str(e)}
 

@@ -6,7 +6,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from '
 import 'leaflet/dist/leaflet.css';
 
 // Map content component to handle markers and lines
-function MapContent({ hierarchyGeo, countryCentroids }) {
+function MapContent({ hierarchyGeo, countryCentroids, originalSearchLei }) {
   const [positions, setPositions] = useState({});
   const map = useMap();
 
@@ -46,15 +46,29 @@ function MapContent({ hierarchyGeo, countryCentroids }) {
         if (!pos) return null;
         
         const isRoot = node.lei === rootLei;
+        const isSearched = node.lei === originalSearchLei;
+        
+        // Determine color and size
+        let color = '#3498db'; // default blue
+        let radius = 6;
+        
+        if (isRoot) {
+          color = '#e74c3c'; // red for ultimate parent
+          radius = 10;
+        } else if (isSearched) {
+          color = '#27ae60'; // green for searched entity
+          radius = 8;
+        }
+        
         return (
           <CircleMarker
             key={node.lei}
             center={pos}
-            radius={isRoot ? 10 : 6}
-            pathOptions={{ color: isRoot ? '#e74c3c' : '#3498db' }}
+            radius={radius}
+            pathOptions={{ color: color, fillColor: color, fillOpacity: 0.7 }}
           >
             <Popup>
-              {node.name}<br/>
+              {isRoot && '🏢 ULTIMATE PARENT: '}{isSearched && '🎯 SEARCHED: '}{node.name}<br/>
               LEI: {node.lei}<br/>
               S&P: {node.spid}
             </Popup>
@@ -83,6 +97,7 @@ function App() {
   const [hierarchy, setHierarchy] = useState('');
   const [hierarchyGeo, setHierarchyGeo] = useState([]);
   const [hierarchyView, setHierarchyView] = useState('tree'); // 'tree' | 'map'
+  const [originalSearchLei, setOriginalSearchLei] = useState('');
   const [coordCache, setCoordCache] = useState({});
   const mapRef = useRef(null);
   const [companyDetails, setCompanyDetails] = useState(null);
@@ -177,6 +192,7 @@ function App() {
     setHierarchy('');
     setHierarchyGeo([]);
     setHierarchyView('tree');
+    setOriginalSearchLei('');
     setError('');
 
     // Fetch company details & hierarchy buttons will work as in single search view
@@ -210,6 +226,7 @@ function App() {
     setHierarchy('');
     setHierarchyGeo([]);
     setHierarchyView('tree');
+    setOriginalSearchLei('');
     setCompanyDetails(null);
     setCurrentView('search');
     setProgress(0);
@@ -265,6 +282,7 @@ function App() {
     setHierarchy('');
     setHierarchyGeo([]);
     setHierarchyView('tree');
+    setOriginalSearchLei('');
     
     try {
       updateProgress(`🏢 Loading details for: ${selectedEntity.entity}`, 20);
@@ -352,6 +370,7 @@ function App() {
     setProgress(0);
     // Clear previous hierarchy geo data
     setHierarchyGeo([]);
+    setOriginalSearchLei('');
     
     try {
       updateProgress(`🏢 Building hierarchy for: ${companyDetails.legal_name}`, 10);
@@ -529,6 +548,7 @@ function App() {
       });
       if (res.data.data) {
         setHierarchyGeo(res.data.data);
+        setOriginalSearchLei(res.data.original_search_lei || companyDetails.lei);
       }
     } catch (err) {
       console.error(err);
@@ -855,7 +875,7 @@ function App() {
               {hierarchyGeo.length>0 ? (
                 <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}} ref={mapRef}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <MapContent hierarchyGeo={hierarchyGeo} countryCentroids={countryCentroids} />
+                  <MapContent hierarchyGeo={hierarchyGeo} countryCentroids={countryCentroids} originalSearchLei={originalSearchLei} />
                 </MapContainer>
               ): (<p>Loading map data...</p>)}
             </div>
