@@ -20,6 +20,10 @@ def get_ranked_entities(search_term, top_n=5):
     """
     Get suggested entity names via autocompletions and rank them by semantic similarity.
     """
+    if not search_term or not str(search_term).strip():
+        # Empty search term – return empty DataFrame to avoid 400 error
+        return pd.DataFrame({'entity': [], 'lei': [], 'score': []})
+
     encoded = quote(search_term)
     url = f"https://api.gleif.org/api/v1/autocompletions?field=fulltext&q={encoded}"
     try:
