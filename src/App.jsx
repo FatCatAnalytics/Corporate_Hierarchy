@@ -175,6 +175,8 @@ function App() {
     setCurrentView('search');
     setCompanyDetails(null);
     setHierarchy('');
+    setHierarchyGeo([]);
+    setHierarchyView('tree');
     setError('');
 
     // Fetch company details & hierarchy buttons will work as in single search view
@@ -206,6 +208,8 @@ function App() {
     setLoading(true);
     setError('');
     setHierarchy('');
+    setHierarchyGeo([]);
+    setHierarchyView('tree');
     setCompanyDetails(null);
     setCurrentView('search');
     setProgress(0);
@@ -257,6 +261,10 @@ function App() {
     setLoading(true);
     setError('');
     setProgress(0);
+    // Clear hierarchy data when viewing a new company
+    setHierarchy('');
+    setHierarchyGeo([]);
+    setHierarchyView('tree');
     
     try {
       updateProgress(`🏢 Loading details for: ${selectedEntity.entity}`, 20);
@@ -342,6 +350,8 @@ function App() {
     setLoading(true);
     setError('');
     setProgress(0);
+    // Clear previous hierarchy geo data
+    setHierarchyGeo([]);
     
     try {
       updateProgress(`🏢 Building hierarchy for: ${companyDetails.legal_name}`, 10);
