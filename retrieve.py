@@ -148,8 +148,9 @@ def build_hierarchy(parent_lei):
         if detail:
             node_name = detail['attributes']['entity']['legalName']['name']
             # Extract S&P Global Market Intelligence ID if available
-            identifiers = detail['attributes']['entity'].get('identifiers', {})
-            spid = identifiers.get('s&pGlobalMarketIntelligenceID', 'N/A')
+            spglobal_array = detail['attributes'].get('spglobal', [])
+            if spglobal_array and len(spglobal_array) > 0:
+                spid = spglobal_array[0]
         
         node = {'lei': lei, 'name': node_name, 'spid': spid, 'children': []}
         
