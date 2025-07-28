@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import './styles.css';
@@ -12,6 +12,7 @@ function App() {
   const [hierarchyGeo, setHierarchyGeo] = useState([]);
   const [hierarchyView, setHierarchyView] = useState('tree'); // 'tree' | 'map'
   const [coordCache, setCoordCache] = useState({});
+  const mapRef = useRef(null);
   const [companyDetails, setCompanyDetails] = useState(null);
   const [currentView, setCurrentView] = useState('search'); // 'search', 'company', 'hierarchy'
   const [loading, setLoading] = useState(false);
@@ -694,7 +695,7 @@ function App() {
             <div className="map-container">
               {/* Map only if leaflet is available */}
               {hierarchyGeo.length>0 ? (
-                <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}}>
+                <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}} whenCreated={(map)=>{mapRef.current=map}}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                    {/* build mapping */}
                    {(()=>{
@@ -704,7 +705,11 @@ function App() {
                        posMap[n.lei] = coords;
                      });
                      Promise.all(promises).then(()=>{
-                       // force rerender
+                       // after coords ready, fit map bounds
+                       if (mapRef.current) {
+                         const latlngs = Object.values(posMap).filter(p=>p[0]!==0||p[1]!==0);
+                         if (latlngs.length>0) mapRef.current.fitBounds(latlngs, {padding:[30,30]});
+                       }
                        setCoordCache((c)=>({...c}));
                      });
                      const rootLei = hierarchyGeo.find(n=>!n.parent)?.lei;
