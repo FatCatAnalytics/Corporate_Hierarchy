@@ -13,6 +13,109 @@ function App() {
   const [error, setError] = useState('');
   const [progressMessage, setProgressMessage] = useState('');
   const [progress, setProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState('single'); // 'single' | 'bulk'
+
+  // Bulk search states
+  const [bulkInput, setBulkInput] = useState('');
+  const [bulkResults, setBulkResults] = useState([]); // [{ target, matches: [...] }]
+  const [bulkSelections, setBulkSelections] = useState({}); // { target: selectedMatchObj }
+  const [pairings, setPairings] = useState([]); // saved on backend
+  const [selectedPairingLei, setSelectedPairingLei] = useState('');
+
+  // ------------------------------------------------------------------
+  // Bulk search helpers
+  // ------------------------------------------------------------------
+  const parseBulkTargets = (input) => {
+    return input
+      .split(/[,\n]/)
+      .map((t) => t.trim())
+      .filter((t) => t)
+      .slice(0, 10); // max 10
+  };
+
+  const handleBulkSearch = async () => {
+    const targets = parseBulkTargets(bulkInput);
+    if (targets.length === 0) return;
+    setLoading(true);
+    setError('');
+    setProgress(0);
+    setBulkResults([]);
+    try {
+      updateProgress('📡 Running bulk search...', 30);
+      const response = await axios.post('http://127.0.0.1:8000/bulk-search', {
+        targets,
+        top: 5,
+      });
+      updateProgress('✅ Bulk search complete', 100);
+      if (response.data.error) {
+        setError(response.data.error);
+      } else {
+        setBulkResults(response.data.data);
+        // default selections: first match per target
+        const initialSel = {};
+        response.data.data.forEach((row) => {
+          if (row.matches && row.matches.length > 0) {
+            initialSel[row.target] = row.matches[0];
+          }
+        });
+        setBulkSelections(initialSel);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+    setProgressMessage('');
+    setProgress(0);
+  };
+
+  const handleSelectMatch = (target, matchObj) => {
+    setBulkSelections({ ...bulkSelections, [target]: matchObj });
+  };
+
+  const handleSavePairings = async () => {
+    const payload = {
+      pairings: Object.entries(bulkSelections).map(([target, selected]) => ({
+        target,
+        selected,
+      })),
+    };
+    try {
+      await axios.post('http://127.0.0.1:8000/pairings', payload);
+      const res = await axios.get('http://127.0.0.1:8000/pairings');
+      setPairings(res.data.data || []);
+    } catch (err) {
+      setError('Error saving pairings: ' + err.message);
+    }
+  };
+
+  const handleSelectPairing = async (lei) => {
+    if (!lei) return;
+    setSelectedPairingLei(lei);
+    // Reuse existing company details workflow
+    setSearchTerm('');
+    setResults([]);
+    setCurrentView('search');
+    setCompanyDetails(null);
+    setHierarchy('');
+    setError('');
+
+    // Fetch company details & hierarchy buttons will work as in single search view
+    setLoading(true);
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/company', {
+        params: { lei },
+      });
+      if (res.data.data) {
+        setCompanyDetails(res.data.data);
+        setCurrentView('company');
+      } else {
+        setError(res.data.error || 'No data');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
 
   const updateProgress = (message, percent) => {
     setProgressMessage(message);
@@ -228,25 +331,110 @@ function App() {
         <h1>GLEIF Entity Search</h1>
         <p>Search for corporate entities and explore their hierarchies</p>
       </header>
-      
-      <div className="search-section">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Enter company name (e.g., Apple, Microsoft, 3M)"
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          disabled={loading}
-        />
-        <button onClick={handleSearch} disabled={loading || !searchTerm.trim()}>
-          {loading ? '⏳ Processing...' : '🔍 Search'}
+
+      {/* Tab navigation */}
+      <div className="tab-bar">
+        <button 
+          className={activeTab === 'single' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('single')}
+        >
+          🔎 Single Search
         </button>
-        {(results.length > 0 || hierarchy || companyDetails || error) && (
-          <button onClick={clearResults} className="clear-btn" disabled={loading}>
-            🗑️ Clear
-          </button>
-        )}
+        <button 
+          className={activeTab === 'bulk' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('bulk')}
+        >
+          📑 Bulk Search
+        </button>
       </div>
+
+      {activeTab === 'single' && (
+        <>
+          {/* SINGLE SEARCH UI (existing) */}
+          <div className="search-section">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Enter company name (e.g., Apple, Microsoft, 3M)"
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              disabled={loading}
+            />
+            <button onClick={handleSearch} disabled={loading || !searchTerm.trim()}>
+              {loading ? '⏳ Processing...' : '🔍 Search'}
+            </button>
+            {(results.length > 0 || hierarchy || companyDetails || error) && (
+              <button onClick={clearResults} className="clear-btn" disabled={loading}>
+                🗑️ Clear
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'bulk' && (
+        <div className="bulk-section">
+          <textarea
+            value={bulkInput}
+            onChange={(e) => setBulkInput(e.target.value)}
+            placeholder="Enter company names separated by commas or new lines (max 10)"
+            rows={4}
+          />
+          <button onClick={handleBulkSearch} disabled={loading || !bulkInput.trim()}>
+            {loading ? '⏳ Processing...' : '🔍 Bulk Search'}
+          </button>
+
+          {bulkResults.length > 0 && (
+            <div className="bulk-results">
+              <h3>🔢 Bulk Search Results</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Target</th>
+                    <th colSpan={5}>Matches (click to select top match)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkResults.map((row, idx) => (
+                    <tr key={idx}>
+                      <td>{row.target}</td>
+                      {Array.from({ length: 5 }).map((_, i) => {
+                        const match = row.matches[i];
+                        if (!match) return <td key={i}>—</td>;
+                        const isSelected = bulkSelections[row.target]?.lei === match.lei;
+                        return (
+                          <td
+                            key={i}
+                            className={isSelected ? 'selected-match' : ''}
+                            onClick={() => handleSelectMatch(row.target, match)}
+                          >
+                            {match.entity}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="primary" onClick={handleSavePairings} disabled={loading}>
+                💾 Save Pairings
+              </button>
+            </div>
+          )}
+
+          {pairings.length > 0 && (
+            <div className="pairings-section">
+              <h3>🎯 Saved Pairings</h3>
+              <select value={selectedPairingLei} onChange={(e) => handleSelectPairing(e.target.value)}>
+                <option value="">Select a company</option>
+                {pairings.map((p, i) => (
+                  <option value={p.lei} key={i}>{p.entity}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Progress Bar and Status */}
       {loading && (

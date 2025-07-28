@@ -25,6 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# GLOBAL in-memory storage for user-selected pairings (reset when server restarts)
+pairings_store = {}
+
 @app.get("/search")
 def search(name: str = Query(...), top: int = 5):
     """Search for entities and return ranked results with LEI codes"""
@@ -147,6 +150,51 @@ def company_details(lei: str = Query(...)):
         error_msg = f"Error getting company details for LEI {lei}: {str(e)}"
         print(error_msg)
         return {"error": error_msg, "data": None}
+
+@app.post("/bulk-search")
+async def bulk_search(payload: dict):
+    """Search multiple entities (max 10). Payload: {"targets": [..], "top": 5}"""
+    try:
+        targets = payload.get("targets", [])
+        top_n = int(payload.get("top", 5))
+        if not isinstance(targets, list):
+            return {"error": "'targets' must be a list", "data": []}
+        if len(targets) == 0:
+            return {"error": "No targets provided", "data": []}
+        if len(targets) > 10:
+            return {"error": "Maximum of 10 targets allowed", "data": []}
+
+        results = []
+        for term in targets:
+            df = get_ranked_entities(term, top_n=top_n)
+            results.append({
+                "target": term,
+                "matches": json.loads(df.to_json(orient="records")) if not df.empty else []
+            })
+        return {"data": results}
+    except Exception as e:
+        return {"error": str(e), "data": []}
+
+@app.post("/pairings")
+async def save_pairings(payload: dict):
+    """Save selected pairings in memory. Payload: {"pairings": [{"target": str, "selected": {...}}]}"""
+    try:
+        pairs = payload.get("pairings", [])
+        if not isinstance(pairs, list):
+            return {"error": "'pairings' must be a list"}
+        for p in pairs:
+            target = p.get("target")
+            selected = p.get("selected")
+            if target and selected:
+                pairings_store[target] = selected
+        return {"status": "saved", "count": len(pairings_store)}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/pairings")
+def get_pairings():
+    """Return saved pairings for dropdown."""
+    return {"data": list(pairings_store.values())}
 
 @app.get("/health")
 def health_check():
