@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import './styles.css';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 function App() {
@@ -675,12 +675,28 @@ function App() {
               {hierarchyGeo.length>0 ? (
                 <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  {hierarchyGeo.map((n,i)=>{
-                    const pos = countryCentroids[n.country] || [0,0];
-                    return <CircleMarker center={pos} radius={6} pathOptions={{ color: '#3498db' }} key={i}>
-                              <Popup>{n.name}<br/>({n.lei})</Popup>
-                            </CircleMarker>
-                  })}
+                   {/* build mapping */}
+                   {(()=>{
+                     const posMap = {};
+                     hierarchyGeo.forEach(n=>{ posMap[n.lei] = countryCentroids[n.country] || [0,0];});
+                     const rootLei = hierarchyGeo.find(n=>!n.parent)?.lei;
+                     return (
+                       <>
+                         {hierarchyGeo.map((n,i)=>{
+                           const pos = posMap[n.lei];
+                           const isRoot = n.lei === rootLei;
+                           return <CircleMarker center={pos} radius={isRoot?10:6} pathOptions={{ color: isRoot?'#e74c3c':'#3498db' }} key={i}>
+                                    <Popup>{n.name}<br/>({n.lei})</Popup>
+                                  </CircleMarker>
+                         })}
+                         {/* lines */}
+                         {hierarchyGeo.filter(n=>n.parent && posMap[n.parent]).map((n,i)=>{
+                           const from=posMap[n.parent]; const to=posMap[n.lei];
+                           return <Polyline key={'l'+i} positions={[from,to]} pathOptions={{color:'#7f8c8d',weight:1}} />
+                         })}
+                       </>
+                     );
+                   })()}
                 </MapContainer>
               ): (<p>Loading map data...</p>)}
             </div>
