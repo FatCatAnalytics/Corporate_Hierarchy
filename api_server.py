@@ -145,7 +145,7 @@ def company_details(lei: str = Query(...)):
                 "initial_date": attributes.get('registration', {}).get('initialRegistrationDate', 'N/A'),
                 "last_update": attributes.get('registration', {}).get('lastUpdateDate', 'N/A'),
                 "next_renewal": attributes.get('registration', {}).get('nextRenewalDate', 'N/A'),
-                "managing_lou": attributes.get('registration', {}).get('managingLOU', 'N/A'),
+                "managing_lou": attributes.get('registration', {}).get('managingLOU') or attributes.get('registration', {}).get('managingLou', 'N/A'),
                 "registered_at": entity.get('registeredAt', {}).get('id', 'N/A'),
                 "registered_as": entity.get('registeredAs', 'N/A')
             }
