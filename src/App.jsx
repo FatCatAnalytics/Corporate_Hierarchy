@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import './styles.css';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -676,7 +677,9 @@ function App() {
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   {hierarchyGeo.map((n,i)=>{
                     const pos = countryCentroids[n.country] || [0,0];
-                    return <Marker position={pos} key={i}><Popup>{n.name}<br/>({n.lei})</Popup></Marker>
+                    return <CircleMarker center={pos} radius={6} pathOptions={{ color: '#3498db' }} key={i}>
+                              <Popup>{n.name}<br/>({n.lei})</Popup>
+                            </CircleMarker>
                   })}
                 </MapContainer>
               ): (<p>Loading map data...</p>)}
