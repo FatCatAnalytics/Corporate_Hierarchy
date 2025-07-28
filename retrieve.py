@@ -152,7 +152,8 @@ def build_hierarchy(parent_lei):
             if spglobal_array and len(spglobal_array) > 0:
                 spid = spglobal_array[0]
         
-        node = {'lei': lei, 'name': node_name, 'spid': spid, 'children': []}
+        country_code = detail['attributes']['entity']['headquartersAddress']['country'] if detail else 'N/A'
+        node = {'lei': lei, 'name': node_name, 'spid': spid, 'country': country_code, 'children': []}
         
         # Get direct children
         children = get_direct_children(lei)
@@ -192,7 +193,7 @@ def build_hierarchy(parent_lei):
                     def attach_to_parent(subtree):
                         nonlocal attached
                         if subtree['lei'] == parent_info['lei']:
-                            subtree['children'].append({'lei': child['lei'], 'name': child['name'], 'spid': 'N/A', 'children': []})
+                            subtree['children'].append({'lei': child['lei'], 'name': child['name'], 'spid': 'N/A', 'country': 'N/A', 'children': []})
                             attached = True
                             return True
                         for sub in subtree['children']:
@@ -204,7 +205,7 @@ def build_hierarchy(parent_lei):
                         continue
                 
                 # otherwise attach to the root node
-                root['children'].append({'lei': child['lei'], 'name': child['name'], 'spid': 'N/A', 'children': []})
+                root['children'].append({'lei': child['lei'], 'name': child['name'], 'spid': 'N/A', 'country': 'N/A', 'children': []})
             
     except Exception:
         # Silently handle ultimate children fetch errors

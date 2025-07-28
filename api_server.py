@@ -183,6 +183,37 @@ def hierarchy_by_lei(lei: str = Query(...)):
     except Exception as e:
         return {"error": str(e)}
 
+# ------------------------------------------------------------------
+# Hierarchy geo endpoint
+# ------------------------------------------------------------------
+
+
+@app.get("/hierarchy_geo")
+def hierarchy_geo(lei: str = Query(...)):
+    """Return flattened hierarchy list with country codes for map view."""
+    if not lei or lei == "LEI_NOT_FOUND":
+        return {"error": "Invalid LEI provided"}
+
+    try:
+        tree = build_hierarchy(lei)
+        flat = []
+
+        def dfs(node):
+            flat.append({
+                "lei": node["lei"],
+                "name": node["name"],
+                "spid": node.get("spid", "N/A"),
+                "country": node.get("country", "N/A"),
+            })
+            for c in node["children"]:
+                dfs(c)
+
+        if tree:
+            dfs(tree)
+        return {"data": flat}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.post("/bulk-search")
 async def bulk_search(payload: dict):
     """Search multiple entities (max 10). Payload: {"targets": [..], "top": 5}"""

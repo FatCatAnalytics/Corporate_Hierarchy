@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import axios from 'axios';
 import './styles.css';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [hierarchy, setHierarchy] = useState('');
+  const [hierarchyGeo, setHierarchyGeo] = useState([]);
+  const [hierarchyView, setHierarchyView] = useState('tree'); // 'tree' | 'map'
   const [companyDetails, setCompanyDetails] = useState(null);
   const [currentView, setCurrentView] = useState('search'); // 'search', 'company', 'hierarchy'
   const [loading, setLoading] = useState(false);
@@ -323,6 +326,33 @@ function App() {
     setError('');
   };
 
+  const countryCentroids = {
+    US: [39.5, -98.35],
+    IE: [53.4, -8],
+    GB: [55, -3],
+    CA: [56.13, -106.35],
+    DE: [51.17, 10.45],
+    FR: [46.2, 2.2],
+    IN: [21, 78],
+    JP: [36, 138],
+    CN: [35, 103],
+    AU: [-25, 133],
+  };
+
+  const fetchHierarchyGeo = async () => {
+    if (!companyDetails) return;
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/hierarchy_geo', {
+        params: { lei: companyDetails.lei },
+      });
+      if (res.data.data) {
+        setHierarchyGeo(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="app">
       <header>
@@ -623,12 +653,35 @@ function App() {
             )}
             <h2>🌳 Corporate Hierarchy</h2>
           </div>
-          <div className="hierarchy-info">
-            <p>📋 Complete organizational structure showing parent-child relationships</p>
+          {/* sub tabs */}
+          <div className="sub-tab-bar">
+            <button className={hierarchyView==='tree'?'subtab active':'subtab'} onClick={()=>setHierarchyView('tree')}>🌳 Tree</button>
+            <button className={hierarchyView==='map'?'subtab active':'subtab'} onClick={()=>{setHierarchyView('map'); if(hierarchyGeo.length===0) fetchHierarchyGeo();}}>🗺 Map</button>
           </div>
-          <div className="hierarchy-content">
-            <pre>{hierarchy}</pre>
-          </div>
+          {hierarchyView==='tree' && (
+            <>
+              <div className="hierarchy-info">
+                <p>📋 Complete organizational structure showing parent-child relationships</p>
+              </div>
+              <div className="hierarchy-content">
+                <pre>{hierarchy}</pre>
+              </div>
+            </>
+          )}
+          {hierarchyView==='map' && (
+            <div className="map-container">
+              {/* Map only if leaflet is available */}
+              {hierarchyGeo.length>0 ? (
+                <MapContainer center={[20,0]} zoom={2} style={{height:'500px', width:'100%'}}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  {hierarchyGeo.map((n,i)=>{
+                    const pos = countryCentroids[n.country] || [0,0];
+                    return <Marker position={pos} key={i}><Popup>{n.name}<br/>({n.lei})</Popup></Marker>
+                  })}
+                </MapContainer>
+              ): (<p>Loading map data...</p>)}
+            </div>
+          )}
         </div>
       )}
       

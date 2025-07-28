@@ -642,3 +642,26 @@ footer {
 .selected-match:hover {
   background: #219150;
 }
+
+/* Sub tab */
+.sub-tab-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.subtab {
+  padding: 6px 14px;
+  border: 1px solid #34495e;
+  border-radius: 6px;
+  background: #ecf0f1;
+  cursor: pointer;
+}
+.subtab.active, .subtab:hover {
+  background: #34495e;
+  color: #fff;
+}
+
+.map-container {
+  width: 100%;
+  height: 500px;
+}
