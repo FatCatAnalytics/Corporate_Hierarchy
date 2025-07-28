@@ -128,12 +128,34 @@ def get_direct_parent(lei):
         'name': data['data']['attributes']['entity']['legalName']['name']
     }
 
-def build_hierarchy(parent_lei):
+def get_ultimate_parent(lei):
     """
-    Build a hierarchical tree of subsidiaries using direct children recursion,
-    then attach any 'missing' ultimate children at the correct level if possible.
+    Find the ultimate parent by following the parent chain upward.
+    Returns the LEI of the ultimate parent (could be the same LEI if no parent exists).
+    """
+    current_lei = lei
+    visited = set()
+    
+    while current_lei and current_lei not in visited:
+        visited.add(current_lei)
+        parent = get_direct_parent(current_lei)
+        if parent:
+            current_lei = parent['lei']
+        else:
+            # No parent found, this is the ultimate parent
+            break
+    
+    return current_lei
+
+def build_hierarchy(start_lei):
+    """
+    Build a hierarchical tree starting from the ultimate parent of the given LEI.
+    Always shows the complete corporate structure from the top down.
     Returns a nested dict: {'lei': str, 'name': str, 'children': [subtrees...]}.
     """
+    # First, find the ultimate parent
+    ultimate_parent_lei = get_ultimate_parent(start_lei)
+    
     visited = set()
 
     def recurse(lei, depth=0):
@@ -165,8 +187,8 @@ def build_hierarchy(parent_lei):
         
         return node
 
-    # Build initial tree via direct children
-    root = recurse(parent_lei)
+    # Build initial tree via direct children starting from ultimate parent
+    root = recurse(ultimate_parent_lei)
 
     # Collect all LEIs present in the tree
     def collect_leis(subtree):
@@ -179,7 +201,7 @@ def build_hierarchy(parent_lei):
 
     # Fetch ultimate children and find those missing from the tree
     try:
-        ultimate = get_ultimate_children(parent_lei)
+        ultimate = get_ultimate_children(ultimate_parent_lei)
         missing = [child for child in ultimate if child['lei'] not in existing_leis]
         
         if missing:
@@ -188,7 +210,7 @@ def build_hierarchy(parent_lei):
                 parent_info = get_direct_parent(child['lei'])
                 attached = False
                 
-                if parent_info and parent_info['lei'] != parent_lei:
+                if parent_info and parent_info['lei'] != ultimate_parent_lei:
                     # try to attach to the direct parent if it's in the tree
                     def attach_to_parent(subtree):
                         nonlocal attached
@@ -231,8 +253,8 @@ def print_tree(node, indent=0):
     """
     prefix = "    " * indent
     if indent == 0:
-        # Root level
-        print(f"{node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
+        # Root level - indicate this is the ultimate parent
+        print(f"🏢 ULTIMATE PARENT: {node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
     else:
         # Child levels with tree formatting
         print(f"{prefix}├── {node['name']} ({node['lei']}, S&P: {node.get('spid', 'N/A')})")
